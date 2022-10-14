@@ -1,0 +1,63 @@
+# Maven
+# Build your Java project and run tests with Apache Maven.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/java
+
+trigger: 
+  batch: true
+  branches:
+    include:
+    - refs/heads/dev
+    - refs/heads/master
+    - refs/heads/qa
+
+pool: 
+  vmImage: ubuntu-latest
+#   name: agent
+
+
+variables:
+  
+  devci: $[ startsWith(variables['build.sourceBranch'], 'refs/heads/dev') ]
+  masterci: $[ startsWith(variables['build.sourceBranch'], 'refs/heads/master') ]
+  qaci: $[ startsWith(variables['build.sourceBranch'], 'refs/heads/qa') ]
+
+steps:
+- task: Maven@3
+  condition: or(and(succeeded(),eq(variables['devci'],True)),eq(variables['qaci'],True),eq(variables['Build.Reason'], 'PullRequest'),eq(variables['masterci'],True))
+  enabled: true
+  inputs:
+    mavenPomFile: 'pom.xml'
+    mavenOptions: '-Xmx3072m'
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: '1.8.0_312'
+    jdkArchitectureOption: 'x64'
+    publishJUnitResults: true
+    testResultsFiles: '**/surefire-reports/TEST-*.xml'
+    goals: 'package'
+#- task: SonarQubePreBuild@1
+#  inputs:
+#    projectKey: 'c81e81a705b261f032cd9d68cbffc66df5af8bb4'
+#    projectName: 'Test_project'
+#    projectVersion: '1.0'
+#- task: PublishBuildArtifacts@1
+ # enabled: true
+  #inputs:
+   # PathtoPublish: '$(Build.artifactstagingdirectory)'
+    #ArtifactName: '$(Build.BuildNumber)'
+  #enabled: true
+  #condition: succeededOrFailed()
+  
+  #  publishLocation: 'Container'
+   # StoreAsTar: true
+- task: PublishBuildArtifacts@1
+  inputs:
+  PathtoPublish: '$(Pipeline.Workspace)/s/gameoflife-build/target/'
+  ArtifactName: '$(Build.BuildNumber)'
+  publishLocation: 'Container'
+
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(Pipeline.Workspace)'
+    artifact: 'drop'
+    publishLocation: 'pipeline'
